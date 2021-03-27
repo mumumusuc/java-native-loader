@@ -11,26 +11,27 @@ object NativeLoader {
     fun load(lib: String) = load(lib, null, null)
 
     @JvmStatic
-    fun load(lib: String, from: String?, to: String?) {
+    fun load(lib: String, clz: Class<*>) = load(lib, clz, null, null)
+
+    @JvmStatic
+    fun load(lib: String, src: String?, dst: String?) = Throwable().let {
+        val target = it.stackTrace.firstOrNull { st -> st.className != javaClass.name }?.className
+            ?: run {
+                println("check stacktrace -> ${it.stackTraceToString()}")
+                throw ClassNotFoundException("target class not found.")
+            }
+        load(lib, Class.forName(target), src, dst)
+    }
+
+    @JvmStatic
+    fun load(lib: String, clz: Class<*>, src: String?, dst: String?) {
         try {
             System.loadLibrary(lib)
         } catch (e: UnsatisfiedLinkError) {
-            val clz = Throwable().let {
-                val target = it.stackTrace.firstOrNull { st -> st.className != javaClass.name }?.className
-                    ?: run {
-                        println("check stacktrace -> ${it.stackTraceToString()}")
-                        throw ClassNotFoundException("target class not found.")
-                    }
-                Class.forName(target)
-            }
             val pkg = clz.getPackage().name
             val libName = resolveLibName(lib)
             val libPath = libName.run {
-                from?.let {
-                    Paths.get(it).toFile().also { file ->
-                        require(file.exists()) { "from path `${file.path}` not exist." }
-                    }.path
-                } ?: Paths.get(pkg.replace('.', '/'))
+                src?.let { Paths.get(it).toFile().path } ?: Paths.get(pkg.replace('.', '/'))
                     .resolve("natives")
                     .resolve(OS.name)
                     .resolve(OS.arch)
@@ -38,7 +39,9 @@ object NativeLoader {
                     .toFile().path
             }
             val tmpPath = libName.run {
-                to?.let { Paths.get(it).toFile().path } ?: Paths.get(pkg).resolve("${clz.hashCode()}")
+                dst?.let { Paths.get(it).toFile().path } ?: Paths.get(System.getProperty("java.io.tmpdir"))
+                    .resolve(pkg)
+                    .resolve("${clz.hashCode()}")
                     .resolve("natives")
                     .resolve(OS.name)
                     .resolve(OS.arch)
@@ -47,10 +50,10 @@ object NativeLoader {
             println("try extract `$libName` from `$libPath` to `$tmpPath`")
             try {
                 clz.classLoader.getResourceAsStream(libPath).use {
-                    checkNotNull(it) { "stb native lib not found in path `$libPath`" }
-                    val tmpDir = Paths.get(System.getProperty("java.io.tmpdir")).resolve(tmpPath)
-                    tmpDir.toFile().mkdirs()
-                    tmpDir.resolve(libName).run {
+                    require(it != null && it.available() > 0) {
+                        "stb native lib not found in path `$libPath`"
+                    }
+                    Paths.get(tmpPath).apply { toFile().mkdirs() }.resolve(libName).run {
                         Files.copy(it, this, StandardCopyOption.REPLACE_EXISTING)
                         @Suppress("UnsafeDynamicallyLoadedCode")
                         System.load(toFile().absolutePath)
