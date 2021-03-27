@@ -1,4 +1,4 @@
-package com.mumumusuc.native
+package com.mumumusuc.loader
 
 import java.io.IOException
 import java.nio.file.Files
@@ -7,7 +7,11 @@ import java.nio.file.StandardCopyOption
 import java.util.*
 
 object NativeLoader {
-    fun load(lib: String, from: String? = null, to: String? = null) {
+    @JvmStatic
+    fun load(lib: String) = load(lib, null, null)
+
+    @JvmStatic
+    fun load(lib: String, from: String?, to: String?) {
         try {
             System.loadLibrary(lib)
         } catch (e: UnsatisfiedLinkError) {
