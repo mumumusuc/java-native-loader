@@ -1,5 +1,7 @@
 # java-native-loader
 
+[![](https://jitpack.io/v/mumumusuc/java-native-loader.svg)](https://jitpack.io/#mumumusuc/java-native-loader)
+
 ```
 NativeLoader.load(
     /**
