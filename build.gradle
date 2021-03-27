@@ -1,0 +1,61 @@
+buildscript {
+    ext {
+        kotlin_version = '1.4.31'
+    }
+
+    repositories {
+        mavenCentral()
+        jcenter()
+        google()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
+    google()
+    maven { url "https://jitpack.io" }
+}
+
+apply plugin: "java"
+apply plugin: "kotlin"
+group "com.mumumusuc"
+version "0.0.1"
+
+sourceSets {
+    main.java.srcDirs = ['src/main/java']
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.java.srcDirs
+    classifier "sources"
+}
+
+gradle.projectsEvaluated {
+    apply plugin: "maven-publish"
+
+    publishing {
+        publications {
+            JarPublication(MavenPublication) {
+                groupId project.group
+                version project.version
+                artifactId "native-loader"
+                artifact sourcesJar
+                artifact jar
+            }
+        }
+        repositories {
+            maven {
+                name = "maven_local"
+                url = "file://${rootDir}/maven_local"
+            }
+        }
+    }
+}
